@@ -12,64 +12,77 @@ import com.cristianvillamil.platziwallet.R
 import com.cristianvillamil.platziwallet.ui.home.FavoriteTransfer
 import com.cristianvillamil.platziwallet.ui.home.HomeContract
 import com.cristianvillamil.platziwallet.ui.home.data.MessageFactory
+
 import com.cristianvillamil.platziwallet.ui.home.data.MessageFactory.Companion.TYPE_SUCCESS
 import com.cristianvillamil.platziwallet.ui.home.presenter.HomePresenter
+import com.cristianvillamil.platziwallet.ui.observable.AvailableBalanceObservable
+import com.cristianvillamil.platziwallet.ui.observable.Observer
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.fragment_home.*
 
 class HomeFragment : Fragment(), HomeContract.View {
 
-    private val favoriteTransferAdapter = FavoriteTransferAdapter()
+  private val favoriteTransferAdapter =
+    FavoriteTransferAdapter()
 
-    private var homePresenter:HomeContract.Presenter? = null
+  private val availableBalanceObservable = AvailableBalanceObservable()
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_home, container, false)
+  private var homePresenter: HomeContract.Presenter? = null
+
+  override fun onCreateView(
+    inflater: LayoutInflater,
+    container: ViewGroup?,
+    savedInstanceState: Bundle?
+  ): View? {
+    return inflater.inflate(R.layout.fragment_home, container, false)
+  }
+
+  override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    super.onViewCreated(view, savedInstanceState)
+    initRecyclerView()
+    homePresenter = HomePresenter(this)
+    homePresenter?.retrieveFavoriteTransfers()
+    circularProgress.setProgressWithAnimation(
+      70f,
+      1000,
+      AccelerateDecelerateInterpolator(),
+      500
+    )
+    Picasso
+      .get()
+      .load("https://media.licdn.com/dms/image/C4E03AQFcCuDIJl0mKg/profile-displayphoto-shrink_200_200/0?e=1583366400&v=beta&t=ymt3xgMe5bKS-2knNDL9mQYFksP9ZHne5ugIqEyRjZs")
+      .into(profilePhotoImageView)
+
+    availableBalanceObservable.addObserver(object : Observer {
+      override fun notifyChange(newValue: Double) {
+        amountValueTextView.text = ("$ $newValue")
+      }
+
+    })
+  }
+
+  private fun initRecyclerView() {
+    favoriteTransfersRecyclerView.layoutManager =
+      LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
+    favoriteTransfersRecyclerView.adapter = favoriteTransferAdapter
+
+
+  }
+
+  override fun showLoader() {
+    homeLoader.visibility = View.VISIBLE
+  }
+
+  override fun hideLoader() {
+    homeLoader.visibility = View.GONE
+  }
+
+  override fun showFavoriteTransfers(favoriteTransfers: List<FavoriteTransfer>) {
+    favoriteTransferAdapter.setData(favoriteTransfers)
+    val dialogFactory = MessageFactory()
+    context?.let {
+      val errorDialog = dialogFactory.getDialog(it, TYPE_SUCCESS)
+      errorDialog.show()
     }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        initRecyclerView()
-        homePresenter = HomePresenter(this)
-        homePresenter?.retrieveFavoriteTransfers()
-        circularProgress.setProgressWithAnimation(
-            70f,
-            1000,
-            AccelerateDecelerateInterpolator(),
-            500
-        )
-        Picasso
-            .get()
-            .load("https://media.licdn.com/dms/image/C4E03AQFcCuDIJl0mKg/profile-displayphoto-shrink_200_200/0?e=1583366400&v=beta&t=ymt3xgMe5bKS-2knNDL9mQYFksP9ZHne5ugIqEyRjZs")
-            .into(profilePhotoImageView)
-    }
-
-    private fun initRecyclerView() {
-        favoriteTransfersRecyclerView.layoutManager =
-            LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
-        favoriteTransfersRecyclerView.adapter = favoriteTransferAdapter
-
-
-    }
-
-    override fun showLoader() {
-        homeLoader.visibility = View.VISIBLE
-    }
-
-    override fun hideLoader() {
-        homeLoader.visibility = View.GONE
-    }
-
-    override fun showFavoriteTransfers(favoriteTransfers: List<FavoriteTransfer>) {
-        favoriteTransferAdapter.setData(favoriteTransfers)
-        val dialogFactory = MessageFactory()
-        context?.let {
-            val errorDialog = dialogFactory.getDialog(it, TYPE_SUCCESS)
-            errorDialog.show()
-        }
-    }
+  }
 }
